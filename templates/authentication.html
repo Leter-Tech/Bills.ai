@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bills.ai - Authentication</title>
+    <link rel="icon" type="image/x-icon" href="static/favicon.png">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="REMOVED"
+    src="REMOVED"
+    type="text/javascript"
+    ></script>
+</head>
+<body>
+        <div style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+        <a href="/" style="text-decoration: none;"><img src="static/favicon.png" height="180px"></a>
+        <a href="/" style="text-decoration: none;"><h1 style="margin: 0; font-size: 60px; color: #03582f; font-family: Gidiff;">bills.ai</h1></a>
+        </div>
+    <div style="display: flex; align-items: center; justify-content: center;">
+    <div id="app"></div>
+    </div>
+
+    <style>
+        @font-face {
+            font-family: Gidiff;
+            src: url("static/GlacialIndifference-Regular.otf") format("opentype");
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #99f7ca;
+        }
+        .cl-footerActionLink {
+            color: #00bf63;
+        }
+        .cl-footerActionLink:focus {
+            box-shadow: 0 0 0 2px #00bf6381;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        ::-webkit-scrollbar-button {
+            display: none;
+        }
+        .cl-footerActionLink:hover{
+            color: #059b53;
+        }
+        .cl-formButtonPrimary{
+            background-color: #00bf63;
+        }
+        .cl-formButtonPrimary:focus{
+            background-color: #00bf63;
+            box-shadow: 0 0 0 2px #00bf6381;
+        }
+        .cl-formButtonPrimary:active{
+            background-color: #00bf63;
+        }
+        .cl-formButtonPrimary:hover{
+            background-color: #059b53;
+        }
+        .cl-dividerLine{
+            background-color: #00bf63;
+        }
+        .cl-dividerText{
+            color: #00bf63;
+        }
+        .cl-formFieldInput{
+         border: 1px solid #00bf6398;
+         accent-color: #00bf63;
+        }
+        .cl-formFieldInput:focus{
+            box-shadow: 0 0 0 2px #00bf6381;
+        }
+        .cl-headerTitle{
+            color: #00bf63;
+        }
+        .cl-internal-b3fm6y{
+            display: none;
+        }
+        .cl-socialButtonsBlockButton:focus{
+            box-shadow: 0 0 0 2px #00bf6381;
+        }
+        .cl-identityPreviewEditButtonIcon{
+            color: #00bf63;
+        }
+
+        .cl-internal-lb49to:focus{
+            box-shadow: 0 0 0 2px #00bf6381;
+        }
+        .cl-formFieldAction{
+            color: #00bf63;
+        }
+        .cl-formFieldAction:hover{
+            color: #00bf63;
+        }
+        .cl-formFieldAction:active{
+            color: #00bf63;
+        }
+        .cl-formFieldAction:focus{
+            box-shadow: 0 0 0 2px #00bf6381;
+        }
+        .cl-footerActionLink:active{
+            color: #00bf63;
+        }
+        .cl-headerBackLink{
+            color: #00bf63;
+        }
+        .cl-internal-fu73ob:hover{
+            color: #00bf63;
+        }
+        .cl-internal-fu73ob:focus{
+            box-shadow: 0 0 0 2px #00bf6381;
+        }
+        .cl-headerBackLink:active{
+            color: #00bf63;
+        }
+        .cl-headerBackIcon{
+            color: #00bf63;
+        }
+        .cl-alternativeMethodsBlockButton:focus{
+            box-shadow: 0 0 0 2px #00bf6381;
+        }
+        .cl-formResendCodeLink{
+            color: #00bf63;
+        }
+        .cl-formResendCodeLink:active{
+            color: #00bf63;
+        }
+        .cl-formResendCodeLink:focus{
+            box-shadow: 0 0 0 2px #00bf6381;
+        }
+        .cl-internal-1cngl90{
+            accent-color: #00bf63;
+        }
+        .cl-internal-1cngl90:active{
+            accent-color: #00bf63;
+        }
+        .cl-internal-1cngl90:active{
+            accent-color: #00bf63;
+        }
+        .cl-formResendCodeLink:hover{
+            color: #00bf63;
+        }
+     </style>
+
+    <script>
+        const firebaseConfig = {
+            Credentials: "REMOVED"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        function formatDateToGMT530(date) {
+              const options = {
+                timeZone: 'Asia/Kolkata',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              };
+              return date.toLocaleString('en-IN', options).replace(',', '');
+        }
+        
+        document.addEventListener('click', function(event) {
+            const element = event.target;
+        
+            const clickData = {
+                tagName: element.tagName,
+                id: element.id || null,
+                classList: Array.from(element.classList).join(' ') || null,
+                textContent: element.textContent.trim() || null,
+                timestamp: formatDateToGMT530(new Date()),
+                page: document.title
+            };
+            database.ref('clicks').push(clickData);
+        });
+        window.addEventListener("load", async function () {
+            await Clerk.load();
+
+            if (Clerk.user) {
+                document.getElementById("app").innerHTML = `
+                    <div id="user-button"></div>
+                `;
+
+                const userButtonDiv = document.getElementById("user-button");
+
+                Clerk.mountUserButton(userButtonDiv);
+
+                window.location.href = '/';
+            } else {
+                document.getElementById("app").innerHTML = `
+                    <div id="sign-in"></div>
+                `;
+
+                const signInDiv = document.getElementById("sign-in");
+
+                Clerk.mountSignIn(signInDiv, {
+                appearance: {
+                    elements: {
+                    formButtonPrimary: {
+                        backgroundColor: '#00bf63',
+                        color: 'white'
+                    }
+                    }
+                }
+                });
+
+            }
+        });
+    </script>
+</body>
+</html>
