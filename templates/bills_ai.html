@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.png">
+    <title>Bills.ai</title>
+    <select id="currencySelector" onchange="setCurrencySymbol()">
+        <option value="$">$</option>
+        <option value="€">€</option>
+        <option value="£" selected>£</option>
+        <option value="¥">¥</option>
+        <option value="₹">₹</option>
+      </select>
+    <meta name="google" content="notranslate">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.0/dist/tesseract.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="REMOVED"
+    src="REMOVED"
+    type="text/javascript"
+    ></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        @font-face {
+                font-family: Gidiff;
+                src: url("static/GlacialIndifference-Regular.otf") format("opentype");
+            }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #99f7ca;
+            padding: 20px;
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        #currencySelector{
+            position: absolute;
+            top: 32px;
+            left: 25px;
+            padding: 3px;
+            border: 3.5px solid #00bf63;
+            border-radius: 5px;
+            background-color: rgb(206, 247, 222);
+            color: #333;
+            font-size: 16px;
+            outline: none;
+            margin-bottom: 20px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        ::-webkit-scrollbar-button {
+            display: none;
+        }
+
+        #personalFinancePopup {
+            width: 80%;
+            max-width: 800px;
+        }
+
+        #expenseChart {
+            width: 100%;
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .chart-filters {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .chart-filters select {
+            padding: 10px;
+            border: 2px solid #00bf63;
+            border-radius: 5px;
+            background-color: white;
+            color: #333;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #00bf63;
+            font-size: 2.5em;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .cl-userButtonPopoverFooter{
+            display: none;
+        }
+
+        .cl-internal-b3fm6y{
+            display: none;
+        }
+
+        .bill-input {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        #fileInput {
+            flex-grow: 1;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #00bf63;
+            border-radius: 30px 0 0 30px;
+            outline: none;
+        }
+
+        @media only screen and (max-width: 767px) {
+            #fileInput {
+                width: 50%;
+                font-size: 14px;
+            }
+            .bill-actions{
+                flex-direction: column;
+            }
+            .generate-btn{
+                width: 50%;
+                font-size: 14px;
+            }
+            .filter-select{
+                width: 50%;
+            }
+            .bill-input{
+                align-items: center;
+            }
+        }
+
+        @media only screen and (min-width: 409px) and (max-width: 766px) {
+            .generate-btn{
+                height: 56px;
+            }
+        }
+
+        @media only screen and (min-width: 320px) and (max-width: 366px) {
+            .fa-wand-magic-sparkles{
+                display: none;
+            }
+            .generate-btn{
+                font-size: 13px;
+                height: 56px;
+            }
+        }
+
+        @media only screen and (min-width: 367px) and (max-width: 408px) {
+            .fa-wand-magic-sparkles{
+                margin-left: 0px !important;
+            }
+            .generate-btn{
+                font-size: 11px;
+                height: 56px;
+            }
+        }
+
+        button {
+            background-color: #00bf63;
+            color: #fff;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 0 25px 25px 0;
+            outline: none;
+        }
+
+        button:hover {
+            background-color: #27db84;
+            color: rgb(2, 72, 23);
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .loader-progress {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 5px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #00bf63;
+            transition: width 0.4s ease;
+            width: 0%;
+        }
+
+        .bill-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .bill-item {
+            background-color: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px #00bf6381;
+            border: 2px solid #27db8481;
+        }
+
+        .bill-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px #00bf6381;
+        }
+
+        .bill-details {
+            flex-grow: 1;
+            margin-right: 20px;
+        }
+
+        .delete-btn {
+            background-color: transparent;
+            color: #00bf63;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 5px;
+        }
+
+        .delete-btn:hover {
+            background-color: transparent;
+            color: #00bf63;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 5px;
+            box-shadow: none;
+        }
+
+        .edit-btn {
+            background-color: transparent;
+            color: #00bf63;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 5px;
+        }
+
+        .edit-btn:hover {
+            background-color: transparent;
+            color: #00bf63;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 5px;
+            box-shadow: none;
+        }
+
+        .download-btn {
+            background-color: transparent;
+            color: #00bf63;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 5px;
+        }
+
+        .download-btn:hover {
+            background-color: transparent;
+            color: #00bf63;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 5px;
+            box-shadow: none;
+        }
+
+        .bill-details p {
+            margin: 5px 0;
+        }
+
+        .bill-details .bill-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #00bf63;
+        }
+
+        .bill-details .bill-type {
+            font-size: 16px;
+            color: #888;
+        }
+
+        .bill-details .bill-date {
+            font-size: 14px;
+            color: #bbb;
+        }
+
+        .bill-details .bill-amount {
+            font-size: 18px;
+            color: #333;
+            font-weight: 700;
+        }
+
+        .bill-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        .bill-actions button {
+            margin-left: 10px;
+        }
+
+        .personal-finance-btn {
+            position: fixed;
+            bottom: 45px;
+            right: 45px;
+            background-color: #00bf63;
+            color: #fff;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 10px #00bf6381;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .personal-finance-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 15px #00bf6381;
+        }
+
+        .dwnld-btn {
+            position: fixed;
+            bottom: 45px;
+            left: 45px;
+            background-color: #00bf63;
+            color: #fff;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 10px #00bf6381;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dwnld-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 15px #00bf6381;
+        }
+
+        .addbill-item {
+            background-color: #ffffffb4;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(131, 12, 79, 0.1);
+            border: 2px dashed #00bf638a;
+            cursor: pointer;
+            transition: 0.3s all;
+        }
+
+        .addbill-item:hover {
+            background-color: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(131, 12, 79, 0.1);
+            border: 2px dashed #00bf63c4;
+            cursor: pointer;
+        }
+
+        .addbill-item:hover .bill1-text{
+            color: #00bf63;
+            flex-grow: 1;
+            font-size: 20px;
+        }
+
+        .bill1-text {
+            color: #00bf63aa;
+            flex-grow: 1;
+            font-size: 20px;
+            font-weight: 600;
+            transition: 0.3s all;
+        }
+
+        .bill1-text:hover {
+            color: #00bf63;
+            flex-grow: 1;
+            font-size: 20px;
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #f1f1f1;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 2);
+            z-index: 1000;
+            border: 1px solid #e0e0e0;
+        }
+
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+
+        .filter-select {
+            padding: 10px;
+            border: 2px solid #00bf63;
+            border-radius: 5px;
+            background-color: white;
+            color: #333;
+            font-size: 16px;
+            outline: none;
+        }
+
+
+        .popup.active {
+            display: block;
+        }
+
+        .popup h2 {
+            margin-top: 0;
+            color: #00bf63;
+        }
+
+        .popup input {
+            width: 96.5%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #00bf63;
+            border-radius: 5px;
+        }
+
+        .popup select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #00bf63;
+            border-radius: 5px;
+        }
+
+        .popup button {
+            width: 100%;
+            padding: 12px;
+            background-color: #00bf63;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .popup button:hover {
+            background-color: #27db84;
+            color: #333;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 30px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            padding: 0;
+            color: #00bf63;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none; 
+            z-index: 1000; 
+            font-size: 16px;
+            text-align: center;
+            width: 300px;
+        }
+
+        .toast i {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast" class="toast">
+        <i class="fas fa-spinner fa-spin"></i> Please wait while we prepare your Bills
+    </div>
+    <div style="display: flex; justify-content: right; align-items: center;">
+        <div style="margin: 8px;" id="app"></div>
+        </div>
+    <div class="container">
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <img onclick="window.location.href='/'" src="/static/favicon.png" style="width: 20%; height: 20%; cursor: pointer;">
+        </div>
+        <a style="text-decoration: none;" href="/"><h1 style="margin-top: 0px; font-family: Gidiff; font-size: 60px; margin-bottom: 10px; text-align: center;">bills.ai</h1></a>
+
+        <div class="bill-input">
+            <input type="file" id="fileInput" accept=".txt, .jpg, .jpeg, .png">
+            <button class="generate-btn" id="generate-btn" onclick="processFile()">Generate <i style="margin-left: 3px;" class="fas fa-wand-magic-sparkles"></i></button>
+        </div>
+        <div id="loader" class="loader">
+            <div class="loader-progress">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+        <div class="filter-container">
+            <select id="typeFilter" class="filter-select" onchange="filterBills()">
+                <option value="">All Types</option>
+                <option value="Housing">Housing</option>
+                <option value="Insurance">Insurance</option>
+                <option value="Transportation">Transportation</option>
+                <option value="Credit and Loans">Credit and Loans</option>
+                <option value="Subscriptions">Subscriptions</option>
+                <option value="Dining and Entertainment">Dining and Entertainment</option>
+                <option value="Medical">Medical</option>
+                <option value="Education Expenses">Education Expenses</option>
+                <option value="Household Supplies">Household Supplies</option>
+                <option value="Product Purchase">Product Purchase</option>
+            </select>
+            <select id="monthFilter" class="filter-select" onchange="filterBills()">
+                <option value="">All Months</option>
+                <option value="01">January</option>
+                <option value="02">February</option>
+                <option value="03">March</option>
+                <option value="04">April</option>
+                <option value="05">May</option>
+                <option value="06">June</option>
+                <option value="07">July</option>
+                <option value="08">August</option>
+                <option value="09">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+        </div>
+    
+        <ul id="billList" class="bill-list"></ul>
+    </div>
+
+    <div id="addBillPopup" class="popup">
+        <h2>Add Bill</h2>
+        <input type="file" id="billImageInput" accept=".jpg, .jpeg, .png">
+        <input type="text" id="billTitleInput" placeholder="Bill Title">
+        <input type="number" id="billAmountInput" placeholder="Total Amount">
+        <select id="billTypeInput">
+            <option value="Housing">Housing</option>
+            <option value="Insurance">Insurance</option>
+            <option value="Transportation">Transportation</option>
+            <option value="Credit and Loans">Credit and Loans</option>
+            <option value="Subscriptions">Subscriptions</option>
+            <option value="Dining and Entertainment">Dining and Entertainment</option>
+            <option value="Medical">Medical</option>
+            <option value="Education Expenses">Education Expenses</option>
+            <option value="Household Supplies">Household Supplies</option>
+            <option value="Product Purchase">Product Purchase</option>
+        </select>
+        <button onclick="addBillManually()">Add Bill</button>
+        <span class="close-btn" onclick="closePopup()">&times;</span>
+
+    </div>
+
+    <div id="editBillPopup" class="popup">
+        <h2>Edit Bill</h2>
+        <input type="text" id="editBillTitleInput" placeholder="Bill Title">
+        <select id="editBillTypeInput">
+            <option value="Housing">Housing</option>
+            <option value="Insurance">Insurance</option>
+            <option value="Transportation">Transportation</option>
+            <option value="Credit and Loans">Credit and Loans</option>
+            <option value="Subscriptions">Subscriptions</option>
+            <option value="Dining and Entertainment">Dining and Entertainment</option>
+            <option value="Medical">Medical</option>
+            <option value="Education Expenses">Education Expenses</option>
+            <option value="Household Supplies">Household Supplies</option>
+            <option value="Product Purchase">Product Purchase</option>
+            </select>
+            <input type="number" id="editBillAmountInput" placeholder="Total Amount">
+            <button onclick="saveEditedBill()">Save</button>
+        <span class="close-btn" onclick="closeEditPopup()">&times;</span>
+    </div>
+
+    <div id="personalFinancePopup" class="popup">
+        <h2>Personal Finance Overview</h2>
+        <div class="chart-filters">
+            <select id="chartTypeFilter" onchange="updateChart()">
+                <option value="">All Types</option>
+                <option value="Housing">Housing</option>
+                <option value="Insurance">Insurance</option>
+                <option value="Transportation">Transportation</option>
+                <option value="Credit and Loans">Credit and Loans</option>
+                <option value="Subscriptions">Subscriptions</option>
+                <option value="Dining and Entertainment">Dining and Entertainment</option>
+                <option value="Medical">Medical</option>
+                <option value="Education Expenses">Education Expenses</option>
+                <option value="Household Supplies">Household Supplies</option>
+                <option value="Product Purchase">Product Purchase</option>
+            </select>
+            <select id="chartMonthFilter" onchange="updateChart()">
+                <option value="">All Months</option>
+                <option value="01">January</option>
+                <option value="02">February</option>
+                <option value="03">March</option>
+                <option value="04">April</option>
+                <option value="05">May</option>
+                <option value="06">June</option>
+                <option value="07">July</option>
+                <option value="08">August</option>
+                <option value="09">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+        </div>
+        <canvas id="expenseChart"></canvas>
+        <button style="margin-top: 20px;" id="dwdpf">Download Summary <i style="margin-left: 4px;" class="fas fa-download"></i></button>
+        <span class="close-btn" onclick="closePersonalFinancePopup()">&times;</span>
+    </div>
+
+    <div class="personal-finance-btn" onclick=""><i class="fas fa-chart-line"></i></div>
+    <div class="dwnld-btn" id="dwnld"><i class="fas fa-file-download"></i></div>
+
+    <script>
+        const initialCurrency = localStorage.getItem("selectedCurrency") || "$";
+        document.getElementById("currencySelector").value = initialCurrency;
+
+        let selectedCurrency = localStorage.getItem("selectedCurrency") || "$";
+        function setCurrencySymbol() {
+            const currencySelector = document.getElementById("currencySelector");
+            selectedCurrency = currencySelector.options[currencySelector.selectedIndex].value;
+            localStorage.setItem("selectedCurrency", selectedCurrency);
+            loadBills();
+        }
+
+function filterBills() {
+            const typeFilter = document.getElementById('typeFilter').value;
+            const monthFilter = document.getElementById('monthFilter').value;
+            const billList = document.getElementById('billList');
+            const email = Clerk.user.emailAddresses[0]?.emailAddress;
+
+            const billsRef = database.ref('bills');
+
+            billsRef.once('value', function(snapshot) {
+                billList.innerHTML = '';
+                snapshot.forEach(function(childSnapshot) {
+                    const billData = childSnapshot.val();
+                    if (billData.userEmail === email) {
+                        const billDate = new Date(billData.date);
+                        const billMonth = (billDate.getMonth() + 1).toString().padStart(2, '0');
+
+                        if ((typeFilter === '' || billData.type === typeFilter) &&
+                            (monthFilter === '' || billMonth === monthFilter)) {
+                            const billItem = createBillItem(billData);
+                            billList.appendChild(billItem);
+                        }
+                    }
+                });
+                addAddBillItem();
+            });
+        }
+
+
+
+function saveEditedBill() {
+    const editPopup = document.getElementById('editBillPopup');
+    const editBillTitleInput = document.getElementById('editBillTitleInput');
+    const editBillTypeInput = document.getElementById('editBillTypeInput');
+    const editBillAmountInput = document.getElementById('editBillAmountInput');
+    const billTitle = editBillTitleInput.value;
+    const billType = editBillTypeInput.value;
+    const billAmount = editBillAmountInput.value;
+    const email = Clerk.user.emailAddresses[0]?.emailAddress;
+    const billsRef = database.ref('bills');
+    billsRef.once('value', function(snapshot) {
+        snapshot.forEach(function(childSnapshot) {
+            const billData = childSnapshot.val();
+            if (billData.title === ddd && billData.userEmail === email) {
+                childSnapshot.ref.update({
+                    title: billTitle,
+                    type: billType,
+                    amount: billAmount
+                });
+                editPopup.classList.remove('active');
+                loadBills();
+            }
+        });
+    });
+}
+
+function closeEditPopup() {
+    document.getElementById('editBillPopup').classList.remove('active');
+}
+
+function createBillItem(billData) {
+    const li = document.createElement('li');
+    li.className = 'bill-item';
+    li.innerHTML = `
+        <div class="bill-details">
+            <p class="bill-title">${billData.title}</p>
+            <p class="bill-type">${billData.type}</p>
+            <p class="bill-date">${billData.date}</p>
+            <p class="bill-amount">${selectedCurrency}${billData.amount}</p>
+        </div>
+        <div class="bill-actions">
+            <button class="edit-btn" onclick="showEditPopup(this, '${billData.title}')"><i class="fas fa-edit"></i></button>
+            <button class="download-btn" onclick="downloadBill('${billData.image}')"><i class="fas fa-download"></i></button>
+            <button class="delete-btn" onclick="deleteBill(this, '${billData.title}')"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    `;
+    return li;
+}
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message}`;
+    toast.style.display = 'block';
+}
+
+function hideToast() {
+    const toast = document.getElementById('toast');
+    toast.style.display = 'none';
+}
+
+var ddd = ""
+
+function showEditPopup(button, billTitle) {
+    const editPopup = document.getElementById('editBillPopup');
+    editPopup.classList.add('active');
+    const editBillTitleInput = document.getElementById('editBillTitleInput');
+    const billTitle11 = button.closest('.bill-item').querySelector('.bill-title').textContent;
+    ddd = billTitle11
+    console.log(ddd);
+    const editBillTypeInput = document.getElementById('editBillTypeInput');
+    const editBillImageInput = document.getElementById('editBillImageInput');
+    editBillTitleInput.value = billTitle;
+    const billTypeOptions = editBillTypeInput.options;
+    for (let i = 0; i < billTypeOptions.length; i++) {
+        if (billTypeOptions[i].value === button.closest('.bill-item').querySelector('.bill-type').textContent) {
+            editBillTypeInput.selectedIndex = i;
+            break;
+        }
+    }
+    const billImage = button.closest('.bill-item').querySelector('.bill-image');
+    if (billImage) {
+        editBillImageInput.value = billImage.src;
+    }
+}
+
+function closePopup() {
+    document.getElementById('addBillPopup').classList.remove('active');
+}
+
+        window.addEventListener("load", async function () {
+            await Clerk.load();
+        
+            function pam(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(name);
+            }
+        
+            const redirectUrl = pam('redirect_url');
+        
+            if (!Clerk.user) {
+                if (redirectUrl) {
+                    setTimeout(() => {
+                        window.location.href = 'authentication';
+                    }, 12000);
+                } else {
+                    window.location.href = 'authentication';
+                }
+            } else {
+                document.getElementById("app").innerHTML = `
+                    <div id="user-button"></div>
+                `;
+        
+                const userButtonDiv = document.getElementById("user-button");
+                Clerk.mountUserButton(userButtonDiv);
+                initializeApp();
+            }
+        });
+        
+        const firebaseConfig = {
+            Credentials: "REMOVED"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        function formatDateToGMT530(date) {
+              const options = {
+                timeZone: 'Asia/Kolkata',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              };
+              return date.toLocaleString('en-IN', options).replace(',', '');
+        }
+        
+        document.addEventListener('click', function(event) {
+            const element = event.target;
+            const email = Clerk.user.emailAddresses[0]?.emailAddress;
+        
+            const clickData = {
+                tagName: element.tagName,
+                id: element.id || null,
+                classList: Array.from(element.classList).join(' ') || null,
+                textContent: element.textContent.trim() || null,
+                timestamp: formatDateToGMT530(new Date()),
+                userInfo: email,
+                page: document.title
+            };
+            database.ref('clicks').push(clickData);
+        });
+        
+        function initializeApp(){
+            loadBills();
+        }
+        
+        function processFile() {
+            const fileInput = document.getElementById('fileInput')
+            const file = fileInput.files[0]
+
+            if (!file) {
+                alert('Please select a file.')
+                return
+            }
+
+            const fileType = file.type
+            if (fileType === 'text/plain')
+                processTextFile(file)
+            else if (fileType === 'image/jpeg' || fileType === 'image/png')
+                processImageFile(file)
+            else {
+                alert('Unsupported file type.')
+            }
+
+            const generateBtn = document.getElementById('generate-btn')
+            generateBtn.disabled = true
+            const loader = document.getElementById('loader')
+            loader.style.display = 'block'
+        }
+        
+        function processTextFile(file) {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const text = event.target.result;
+                sendBillsToServer(text);
+            };
+            reader.readAsText(file);
+        }
+
+        function showPersonalFinancePopup() {
+            document.getElementById('personalFinancePopup').classList.add('active');
+            updateChart();
+        }
+
+        function closePersonalFinancePopup() {
+            document.getElementById('personalFinancePopup').classList.remove('active');
+        }
+
+        let expenseChart;
+
+        function updateChart() {
+            const typeFilter = document.getElementById('chartTypeFilter').value;
+            const monthFilter = document.getElementById('chartMonthFilter').value;
+            const email = Clerk.user.emailAddresses[0]?.emailAddress;
+
+            const billsRef = database.ref('bills');
+
+            billsRef.once('value', function(snapshot) {
+                const expenses = {};
+                snapshot.forEach(function(childSnapshot) {
+                    const billData = childSnapshot.val();
+                    if (billData.userEmail === email) {
+                        const billDate = new Date(billData.date);
+                        const billMonth = (billDate.getMonth() + 1).toString().padStart(2, '0');
+                        const billYear = billDate.getFullYear();
+                        const key = `${billYear}-${billMonth}`;
+
+                        if ((typeFilter === '' || billData.type === typeFilter) &&
+                            (monthFilter === '' || billMonth === monthFilter)) {
+                            if (!expenses[key]) {
+                                expenses[key] = 0;
+                            }
+                            expenses[key] += parseFloat(billData.amount);
+                        }
+                    }
+                });
+
+                const sortedExpenses = Object.entries(expenses).sort(([a], [b]) => a.localeCompare(b));
+                const labels = sortedExpenses.map(([date]) => date);
+                const data = sortedExpenses.map(([, amount]) => amount);
+
+                const ctx = document.getElementById('expenseChart').getContext('2d');
+                
+                if (expenseChart) {
+                    expenseChart.destroy();
+                }
+
+                expenseChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Total Expenses',
+                            data: data,
+                            borderColor: '#00bf63',
+                            backgroundColor: 'rgba(0, 191, 99, 0.1)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value, index, values) {
+                                        return selectedCurrency + value;
+                                        console.log(index)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        document.querySelector('.personal-finance-btn').onclick = showPersonalFinancePopup;
+        
+        function processImageFile(file) {
+            const loader = document.getElementById('loader');
+            const progressFill = document.getElementById('progressFill');
+            loader.style.display = 'block';
+        
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const imageDataUrl = event.target.result;
+        
+                Tesseract.recognize(
+                    file,
+                    'eng',
+                    {
+                        logger: info => {
+                            if (info.status === 'recognizing text') {
+                                progressFill.style.width = `${info.progress * 100}%`;
+                            }
+                        }
+                    }
+                ).then(({ data: { text } }) => {
+                    loader.style.display = 'none';
+                    const generateBtn = document.getElementById('generate-btn')
+                    generateBtn.disabled = false
+
+                    sendBillsToServer(text, imageDataUrl);
+                }).catch(error => {
+                    loader.style.display = 'none';
+                    console.error("Error processing image:", error);
+                    alert('Failed to process image.');
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function sendBillsToServer(billsText, imageDataUrl = '') {
+        document.getElementById('loader').style.display = 'block'
+
+        const email = Clerk.user.emailAddresses[0]?.emailAddress;
+
+        const billsData = {
+            bills: billsText,
+            image: imageDataUrl,
+            userEmail: email
+        }
+
+        fetch('/api/generate_bills', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(billsData)
+        })
+            .then(response => response.json())
+            .then(data => {
+            document.getElementById('loader').style.display = 'none'
+            if (data.bill) {
+                const billList = document.getElementById('billList')
+                billList.innerHTML = ''
+                const bill = data.bill
+                if (bill.title) {
+                const billData = {
+                    title: bill.title,
+                    type: bill.type,
+                    amount: bill.amount,
+                    date: new Date().toLocaleDateString(),
+                    image: imageDataUrl,
+                    userEmail: email
+                }
+                const billItem = createBillItem(billData)
+                billList.appendChild(billItem)
+                saveBillToFirebase(billData)
+                loadBills()
+                }
+            } else {
+                alert('No bills generated from the input.')
+            }
+            })
+            .catch((error) => {
+            document.getElementById('loader').style.display = 'none'
+            console.error("Error generating bills: ", error)
+            alert('An error occurred while generating bills. Please try again.')
+            })
+        }
+        
+        function addBillManually() {
+            const billImageInput = document.getElementById('billImageInput');
+            const billTitleInput = document.getElementById('billTitleInput').value;
+            const billAmountInput = document.getElementById('billAmountInput').value;
+            const billTypeInput = document.getElementById('billTypeInput').value;
+        
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const imageDataUrl = event.target.result;
+        
+                const email = Clerk.user.emailAddresses[0]?.emailAddress;
+        
+                const billData = {
+                    title: billTitleInput,
+                    type: billTypeInput,
+                    amount: billAmountInput,
+                    date: new Date().toLocaleDateString(),
+                    image: imageDataUrl,
+                    userEmail: email
+                };
+        
+                const billList = document.getElementById('billList');
+                const billItem = createBillItem(billData);
+                billList.appendChild(billItem);
+                saveBillToFirebase(billData);
+                loadBills()
+
+                document.getElementById('addBillPopup').classList.remove('active');
+            };
+        
+            if (billImageInput.files.length > 0) {
+                reader.readAsDataURL(billImageInput.files[0]);
+            } else {
+                alert('Please select a bill image.');
+            }
+        }
+        
+        function downloadBill(imageDataUrl) {
+            const link = document.createElement('a');
+            link.href = imageDataUrl;
+            link.download = 'bill.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        function deleteBill(button, billTitle) {
+            if (confirm('Are you sure you want to delete this bill?')) {
+                const billItem = button.closest('.bill-item');
+                billItem.remove();
+                deleteBillFromFirebase(billTitle);
+            }
+        }
+        
+        function saveBillToFirebase(billData) {
+            database.ref('bills').push(billData);
+            database.ref('userInput').push(billData);
+        }
+        
+        function deleteBillFromFirebase(billTitle) {
+            const billsRef = database.ref("bills");
+            billsRef.once("value", function(snapshot) {
+                snapshot.forEach(function(childSnapshot) {
+                    const bill = childSnapshot.val();
+                    if (bill.title === billTitle) {
+                        childSnapshot.ref.remove();
+                    }
+                });
+            });
+        }
+        
+        function loadBills() {
+            const billList = document.getElementById('billList');
+            const email = Clerk.user.emailAddresses[0]?.emailAddress;
+        
+            const billsRef = database.ref('bills');
+        
+            billsRef.once('value', function(snapshot) {
+                billList.innerHTML = '';
+                snapshot.forEach(function(childSnapshot) {
+                    const billData = childSnapshot.val();
+                    if (billData.userEmail === email) {
+                        const billItem = createBillItem(billData);
+                        billList.appendChild(billItem);
+                    }
+                });
+                const li = document.createElement('li');
+            li.className = 'addbill-item';
+            li.addEventListener("click", showAddBillPopup)
+            li.innerHTML = `
+               <div class="bill1-text" style="display: flex; align-items: center; justify-content: center;">
+                <i style="margin-right: 8px;" class="fas fa-plus-circle"></i>Add Bill
+                </div>
+            `;
+            billList.appendChild(li);
+            });
+        }
+
+        document.getElementById('dwnld').addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            showToast('Please wait while we prepare your Bills');
+
+            html2canvas(document.querySelector('.container')).then(canvas => {
+                const pdf = new jspdf.jsPDF();
+                let position = 0;
+                const imgData = canvas.toDataURL('image/png');
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                let heightLeft = pdfHeight;
+
+                const pageHeight = pdf.internal.pageSize.getHeight();
+
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft >= 0) {
+                            position = heightLeft - pdfHeight;
+                            pdf.addPage();
+                            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                            heightLeft -= pageHeight;
+                        }
+                
+                pdf.save('BillsAI_Bills.pdf');
+                hideToast();
+            }).catch(error => {
+                hideToast();
+                console.error('Error generating PDF:', error);
+                alert('An error occurred while generating the PDF');
+            });
+        });
+
+        document.getElementById('dwdpf').addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            showToast('Please wait while we prepare your Expense Summary');
+
+            html2canvas(document.querySelector('#personalFinancePopup')).then(canvas => {
+                const pdf = new jspdf.jsPDF();
+                let position = 0;
+                const imgData = canvas.toDataURL('image/png');
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                let heightLeft = pdfHeight;
+
+                const pageHeight = pdf.internal.pageSize.getHeight();
+
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft >= 0) {
+                            position = heightLeft - pdfHeight;
+                            pdf.addPage();
+                            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                            heightLeft -= pageHeight;
+                        }
+                
+                pdf.save('BillsAI_Expenses.pdf');
+                hideToast();
+            }).catch(error => {
+                hideToast();
+                console.error('Error generating PDF:', error);
+                alert('An error occurred while generating the PDF');
+            });
+        });
+
+        
+        function showAddBillPopup() {
+            document.getElementById('addBillPopup').classList.add('active');
+        }
+        
+        </script>
+
+</body>
+
+</html>
