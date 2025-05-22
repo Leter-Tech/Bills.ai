@@ -97,4 +97,15 @@ graph TD
 
 ---
 
+## 🛡️ License
+
+This project is shared publicly for learning and inspiration purposes only.
+
+❌ You may **NOT** copy, reuse, redistribute, or modify this code.  
+✅ You may view and learn from the code.
+
+Copyright © | All rights reserved
+
+---
+
 Built with ❤️ for effortless bill management and expense tracking.
